@@ -1,282 +1,220 @@
 # Quantum Gravitational Dynamics (QGD)
 
-> **Core thesis:** Spacetime geometry is not fundamental. It emerges algebraically from a dimensionless phase field $\sigma_\mu$ derived from the semiclassical WKB limit of the Dirac spinor. All of classical General Relativity — and its quantum corrections — follow as consequences.
+> **Thesis (Romeo Matshaba):** spacetime geometry is not fundamental. It is built algebraically from a dimensionless phase field $\sigma_\mu$ obtained from the semiclassical (WKB) limit of the Dirac spinor, and General Relativity is recovered as a consequence.
 
 [![Theory](https://img.shields.io/badge/Theory-QGD-blue)](docs/complete_paper.tex)
 [![Solutions](https://img.shields.io/badge/GR_Solutions-Algebraic-green)](comparison/EFE_solutions_from_QGD_perspective.py)
 [![Dark Matter](https://img.shields.io/badge/Dark_Matter-No_Per--Galaxy_Fit-orange)](validation/)
 [![License](https://img.shields.io/badge/License-MIT-lightgrey)](LICENSE)
 
----
-
-## Table of Contents
-
-1. [The Core Idea](#the-core-idea)
-2. [The Fundamental Chain](#the-fundamental-chain)
-3. [Master Equations](#master-equations)
-4. [What QGD Solves](#what-qgd-solves)
-5. [All GR Solutions Recovered Algebraically](#all-gr-solutions-recovered-algebraically)
-6. [Dark Matter as Quantum Structure](#dark-matter-as-quantum-structure)
-7. [Falsifiable Predictions](#falsifiable-predictions)
-8. [Repository Structure](#repository-structure)
-9. [Quick Start](#quick-start)
+This repository holds the theory, the code that implements it, and an independent test suite that checks it. Every
+claim below carries a status taken from [`docs/claims_ledger.md`](docs/claims_ledger.md):
+**verified** (re-derived independently), **recorded** (true with a stated limit), **fails** (false as stated),
+**untested** (needs input not in this repository).
 
 ---
 
-## The Core Idea
+## Contents
 
-General Relativity takes the metric $g_{\mu\nu}$ as fundamental and derives dynamics from the Einstein-Hilbert action. QGD makes a different choice:
-
-**The metric is not fundamental. It is an algebraic output of an underlying phase field.**
-
-Starting from the Dirac spinor $\psi = R(x) e^{iS(x)/\hbar}$ in the semiclassical (WKB) limit, we identify the dimensionless phase gradient:
-
-$$\sigma_\mu(x) \equiv \frac{1}{c} \partial_\mu S(x)$$
-
-This single four-vector encodes all gravitational physics. The metric is then **constructed**, not solved for:
-
-$$\boxed{g_{\mu\nu}(x) = T^\alpha_\mu T^\beta_\nu \left( M_{\alpha\beta} \circ \left[ \eta_{\alpha\beta} - \sum_{a=1}^{N} \varepsilon_a \, \sigma_\alpha^{(a)} \sigma_\beta^{(a)} - \kappa \ell_Q^2 \, \partial_\alpha \sigma^\gamma \partial_\beta \sigma_\gamma \right] \right)}$$
-
-where:
-- $T^\alpha_\mu$: coordinate transformation matrix (e.g., spherical, cosmological)
-- $M_{\alpha\beta}$: geometric scaling matrix
-- $\varepsilon_a \in \{+1, -1\}$: source signature (attractive vs repulsive)
-- $\ell_Q = \sqrt{G\hbar^2/c^4}$: quantum gravitational length scale
-- $\kappa \approx 2$: quantum stiffness coefficient
+1. [The idea](#the-idea)
+2. [Master equations](#master-equations)
+3. [Recovering GR solutions](#recovering-gr-solutions)
+4. [Dark matter](#dark-matter)
+5. [Claims and status](#claims-and-status)
+6. [What the tests found](#what-the-tests-found)
+7. [Open decisions for the author](#open-decisions-for-the-author)
+8. [Repository structure](#repository-structure)
+9. [Quick start](#quick-start)
+10. [Citation](#citation)
 
 ---
 
-## The Fundamental Chain
+## The idea
+
+GR takes the metric $g_{\mu\nu}$ as fundamental. QGD takes the Dirac spinor $\psi = R\,e^{iS/\hbar}$, defines the
+dimensionless phase gradient
+
+$$\sigma_\mu \equiv \frac{1}{c}\,\partial_\mu S ,$$
+
+and constructs the metric from it:
+
+$$g_{\mu\nu} = T^\alpha_\mu T^\beta_\nu\Big(M_{\alpha\beta}\circ\big[\eta_{\alpha\beta} - \sum_{a}\varepsilon_a\,\sigma^{(a)}_\alpha\sigma^{(a)}_\beta - \kappa\ell_Q^2\,\partial_\alpha\sigma^\gamma\partial_\beta\sigma_\gamma\big]\Big)$$
+
+with $\varepsilon_a=\pm1$ the source signature (attractive or repulsive), $\ell_Q$ the quantum gravitational length and
+$\kappa\approx 2$ the stiffness. (The sign convention of this formula versus the code is an open item, see
+[decisions](#open-decisions-for-the-author).)
 
 ```
-Dirac spinor ψ = R(x)·exp(iS/ℏ)
-        ↓  WKB limit
-Phase field  σ_μ = (1/c)∂_μS
-        ↓  algebraic construction
-Metric  g_μν = η_μν - Σ εₐ σ_μ^(a) σ_ν^(a) - κℓ_Q² ∂σ∂σ
-        ↓  variational principle
-Field equation  □_g σ_μ = Q_μ + G_μ + T_μ + κℓ_Q²□_g²σ_μ
-        ↓  classical limit ℓ_Q → 0
-Einstein's equations  G_μν = (8πG/c⁴) T_μν
+Dirac spinor  psi = R exp(iS/hbar)
+      | WKB limit
+phase field   sigma_mu = (1/c) d_mu S
+      | algebraic construction
+metric        g = eta - sum eps sigma sigma - kappa l_Q^2 (d sigma)(d sigma)
+      | variational principle
+field eq.     box_g sigma_mu = Q_mu + G_mu + T_mu + kappa l_Q^2 box_g^2 sigma_mu
+      | l_Q -> 0
+Einstein      G_mn = (8 pi G / c^4) T_mn
 ```
 
-The relationship to GR is an **equivalence under variable substitution**, not a derivation. When $\sigma_\mu$ satisfies the QGD field equation and $g_{\mu\nu}$ is built from the master metric formula, Einstein's equations are automatically satisfied.
+The relation to GR is an equivalence under variable substitution, not a derivation from GR's field equations.
 
 ---
 
-## Master Equations
+## Master equations
 
-### The Action
+**Action**
 
-$$S_\sigma = \int d^4x \sqrt{-g(\sigma)} \left[ -\frac{c^4}{16\pi G} R[g(\sigma)] + \frac{1}{2}\nabla_\mu \sigma_\nu \nabla^\mu \sigma^\nu - \frac{\ell_Q^2}{2} \nabla_\alpha\nabla_\beta\sigma_\mu \nabla^\alpha\nabla^\beta\sigma^\mu \right] + S_{\text{matter}}$$
+$$S_\sigma = \int d^4x\sqrt{-g(\sigma)}\Big[-\frac{c^4}{16\pi G}R[g(\sigma)] + \tfrac12\nabla_\mu\sigma_\nu\nabla^\mu\sigma^\nu - \tfrac{\ell_Q^2}{2}\nabla_\alpha\nabla_\beta\sigma_\mu\nabla^\alpha\nabla^\beta\sigma^\mu\Big] + S_{\rm matter}$$
 
-### The Field Equation
+**Field equation** (fourth order)
 
-Variation of $S_\sigma$ with respect to $\sigma_\mu$ yields the fourth-order equation:
+$$\Box_g\sigma_\mu = Q_\mu + G_\mu + T_\mu + \kappa\ell_Q^2\,\Box_g^2\sigma_\mu + \mathcal O(\ell_Q^4)$$
 
-$$\boxed{\Box_g \sigma_\mu = Q_\mu(\sigma, \partial\sigma) + G_\mu(\sigma, \ell, H, q) + T_\mu + \kappa\ell_Q^2 \Box_g^2 \sigma_\mu + \mathcal{O}(\ell_Q^4)}$$
+$Q_\mu$ nonlinear self-interaction (the dark-matter sector), $G_\mu$ Kerr-Schild and radiative couplings,
+$T_\mu=\tfrac12T^{\mu\nu}\sigma_\nu$ matter.
 
-Sources:
-- $Q_\mu$: nonlinear self-interactions (origin of dark matter phenomenology)
-- $G_\mu$: coupling to Kerr-Schild and radiative sectors
-- $T_\mu = \frac{1}{2}T^{\mu\nu}\sigma_\nu$: matter stress-energy
-- $\kappa\ell_Q^2 \Box_g^2 \sigma_\mu$: quantum gravitational stiffness (resolves singularities)
+**Universal scalar.** All static and stationary metrics are written through one function, $g_{tt}=-(1-f)$:
 
-### The Complete Wavefunction
+$$f(r,\theta)=\underbrace{\tfrac{2GM}{c^2r}}_{\rm mass}-\underbrace{\tfrac{GQ^2}{c^4r^2}}_{\rm charge}+\underbrace{\tfrac{2Mr}{\Sigma}}_{\rm spin}+\underbrace{\tfrac{\Lambda r^2}{3}}_{\Lambda}+\underbrace{\tfrac{b(r)}{r}}_{\rm pressure}+\underbrace{H^2(t)r^2}_{\rm expansion}-\underbrace{\int\tfrac{P}{\rho c^2}dr}_{\rm EOS}+\underbrace{\kappa\tfrac{\hbar^2}{M^2c^2r^2}}_{\rm quantum}$$
 
-The four-component gravitational wavefunction encoding all configurations:
-
-$$\psi = \frac{2GMmi}{c\hbar} \left[ \psi_0 \begin{pmatrix}1\\0\\\sqrt{f}\\ ia\sin\theta\sqrt{g}\end{pmatrix} e^{-iS/\hbar} + \psi_1 \begin{pmatrix}0\\1\\-ia\sin\theta\sqrt{g}\\-\sqrt{f}\end{pmatrix} e^{-iS/\hbar} + \psi_2 \begin{pmatrix}\sqrt{f}\\ia\sin\theta\sqrt{g}\\1\\0\end{pmatrix} e^{+iS/\hbar} + \psi_3 \begin{pmatrix}-ia\sin\theta\sqrt{g}\\-\sqrt{f}\\0\\1\end{pmatrix} e^{+iS/\hbar} \right]$$
-
-where the **universal gravitational scalar** $f(r,\theta)$ encodes all physics:
-
-$$\boxed{f(r,\theta) = \underbrace{\frac{2GM}{c^2 r}}_{\text{mass}} - \underbrace{\frac{GQ^2}{c^4 r^2}}_{\text{charge}} + \underbrace{\frac{2Mr}{\Sigma}}_{\text{spin}} + \underbrace{\frac{\Lambda r^2}{3}}_{\Lambda} + \underbrace{\frac{b(r)}{r}}_{\text{pressure}} + \underbrace{H^2(t)r^2}_{\text{expansion}} - \underbrace{\int\frac{P(r)}{\rho(r)c^2}dr}_{\text{EOS}} + \underbrace{\kappa\frac{\hbar^2}{M^2c^2r^2}}_{\text{quantum}}}$$
-
-Every known spacetime is a special case of $f(r,\theta)$.
+In the static form $G^t{}_t$ is affine in $f$, so every term has a definite implied energy density
+$\rho=(rf)'/(8\pi G r^2)$ (see [what the tests found](#what-the-tests-found)).
 
 ---
 
-## What QGD Solves
+## Recovering GR solutions
 
-| Long-standing problem | GR status | QGD resolution |
-|---|---|---|
-| Gravitational energy localization | Pseudotensor only (109-year open problem) | True tensor $T^{\mu\nu}_\sigma$, positive definite |
-| Black hole singularities | Generic, unavoidable | Resolved at $r \sim \lambda_C = \hbar/Mc$ |
-| N-body exact solutions | No closed form | Exact algebraic: $\sigma_t = \sum_a \sqrt{2GM_a/c^2 r_a}$ |
-| Dark matter | Requires new particles | Factorial $\kappa_j$ structure of quantum phase Taylor expansion |
-| Quantum corrections | Undefined in GR | Explicit $\mathcal{O}(\hbar^2)$: $\delta g_{tt} = -G\hbar^2/(Mc^4 r^3)$ |
-| Binary waveforms | Supercomputer, weeks | Algebraic, O(N²), seconds |
-| Cosmological constant | Fine-tuning problem | $\rho_\sigma = 3H_0^2/8\pi G$, $w = -1$ from attractor solution |
+The source-signature recipe: pick $\sigma^{(a)}$ and $\varepsilon_a$, apply the master metric.
 
----
-
-## All GR Solutions Recovered Algebraically
-
-The **source signature recipe** — choose $\sigma^{(a)}$ and $\varepsilon_a$, apply the master metric:
-
-| Spacetime | $\sigma$-field | $\varepsilon_a$ | Physical effect |
+| Spacetime | $\sigma$-field | $\varepsilon$ | Status |
 |---|---|---|---|
-| Schwarzschild | $\sqrt{2GM/c^2r}$ | $+1$ | Attractive mass |
-| Kerr | $a\sin\theta\sqrt{2GM/c^2r}$ | $+1$ | Frame dragging |
-| Reissner-Nordström | $\sqrt{GQ^2/c^4r^2}$ | $-1$ | EM repulsion |
-| de Sitter ($\Lambda > 0$) | $Hr$ | $+1$ | Cosmological expansion |
-| Anti-de Sitter | $\|H\|r$ | $-1$ | AdS geometry |
+| Schwarzschild | $\sqrt{2GM/c^2r}$ | $+1$ | verified (Kerr-Schild form, Ricci-flat) |
+| Reissner-Nordström | $\sqrt{GQ^2/c^4r^2}$ | $-1$ | verified (exactly the Maxwell stress) |
+| de Sitter / Nariai | $Hr$ | $+1$ | verified (double horizon at $r=1/\sqrt\Lambda$, area $4\pi/\Lambda$, $GM=c^3/3\sqrt3H$) |
+| Anti-de Sitter | $\lvert H\rvert r$ | $-1$ | not separately tested |
+| Kerr | $a\sin\theta\sqrt{2GM/c^2r}$ | $+1$ | untested; $g_{t\phi}$ from the cross term is reproduced, $g_{rr},g_{\theta\theta}$ are not supplied by $\sigma$ |
 
-**Frame dragging as interference:** The Kerr off-diagonal term $g_{t\phi}$ is not input — it emerges automatically from the cross-product $\sigma_t^{(\text{mass})} \times \sigma_\phi^{(\text{spin})}$.
+Frame dragging appears as interference: the Kerr $g_{t\phi}$ comes from the product of the mass and spin $\sigma$'s.
+[`comparison/EFE_solutions_from_QGD_perspective.py`](comparison/EFE_solutions_from_QGD_perspective.py) builds ten of
+these and prints `Passed 10/10 checks`.
 
-See [`comparison/EFE_solutions_from_QGD_perspective.py`](comparison/EFE_solutions_from_QGD_perspective.py) for the algebraic constructions of each metric (it checks 10 of them and prints the result).
-
----
-
-## Dark Matter as Quantum Structure
-
-The Taylor expansion of the gravitational phase factor:
-
-$$e^{i\phi} = e^{i\sigma_\mu x^\mu/\hbar} = \sum_{j=0}^{\infty} \frac{(i\sigma)^j}{j!}$$
-
-generates factorial enhancement factors:
-
-$$\kappa_j = \sqrt{\frac{(2j-1)!}{2^{2j-2}}} \qquad \Rightarrow \qquad \kappa = [1.00,\ 1.225,\ 2.74,\ 8.87,\ 37.7,\ 197,\ 1233, \ldots]$$
-
-**Modified rotation curve (no per-galaxy fit parameters; the engine's shared empirical constants are listed under "Independent checks"):**
-
-$$v^2(r) = \frac{GM_{\text{baryon}}(<r)}{r}\left[1 + \sum_{j=2}^{4} \kappa_j \, g_j(r)\right]$$
-
-**Validation reported by the author (4,248 measurements, 175 galaxies; not reproduced in full, see "Independent checks"):**
-- $R^2 = 0.908$ (reproduced on the shipped data file: 0.91)
-- $\chi^2_\nu \approx 1.2$ (not reproduced: about 150 under the choices in `validation/reproduce_sparc.py`)
-- RMS = 8.3 km/s (not reproduced: about 26 km/s)
-- No per-galaxy fit parameters (vs 5–7 for $\Lambda$CDM); the shared empirical constants of the engine are not counted in that comparison
-
-Cross-dataset universality: same $\kappa_j$ values for clusters, ellipticals, CMB peak spacing, and wide binary External Field Effect.
-
-See [`validation/`](validation/) and [`validation/dark_matter.py`](validation/dark_matter.py).
+**Limit of the recipe.** It is exact when all terms share one null direction (mass + charge + $\Lambda$ on one centre:
+for a Kerr-Schild metric the mixed Ricci tensor is linear in $h$). It is **not** exact for separated sources: the
+$\sigma_t=\sum_a\sqrt{2GM_a/c^2r_a}$ N-body metric has a nonzero Ricci tensor of order $(GM)^2$ from the cross term.
+So the "exact N-body solution" is a statement about the $\sigma$-field sum, not a vacuum solution of Einstein's equations.
 
 ---
 
-## Falsifiable Predictions
+## Dark matter
 
-All predictions follow from the theory with no additional assumptions:
+The Taylor expansion of the phase factor gives factorial enhancement constants
 
-| Prediction | Value | Testable with |
+$$\kappa_j=\sqrt{\frac{(2j-1)!}{2^{2j-2}}}\ \Rightarrow\quad \kappa = [1.00,\ 1.225,\ 2.74,\ 8.87,\ 37.7,\ 197,\ 1233, \ldots]$$
+
+and a modified rotation curve $v^2=\frac{GM_{\rm bar}(<r)}{r}\big[1+\sum_{j=2}^{4}\kappa_j g_j(r)\big]$.
+
+The engine is [`validation/dark_matter.py`](validation/dark_matter.py). It has no per-galaxy fit parameters but does
+have shared empirical constants (`SIGMA_CRIT`, `ALPHA`, `BETA_0`, `LOG_M_TRIGGER`, two mass-to-light ratios, `G_CRIT`),
+so it is not parameter-free.
+
+| SPARC quantity | Author's value | Reproduced here | Note |
+|---|---|---|---|
+| pooled $R^2$ | 0.908 | 0.91 | verified |
+| RMS | 8.3 km/s | about 26 km/s | fails under the choices in `reproduce_sparc.py` |
+| $\chi^2_\nu$ | 1.2 | about 150 | fails, same choices |
+| data set | 4,248 points, 175 galaxies | 3,827 rows, 225 galaxies in `SPARC-rotational.txt` | different file |
+
+For comparison, MOND with one fixed $a_0=1.2\times10^{-10}$ m/s² on the same inputs gives $R^2=0.93$, RMS 23 km/s
+and a lower median per-galaxy RMS (10.8 vs 16.7 km/s). These statements concern this file and these choices (mass from
+`V_bar(R_last)`, the engine's own surface-density estimate, no external field), not the theory; a different mass
+estimate could change them. See `validation/sparc_check.png`.
+
+**CMB peaks.** Planck binned TT gives peaks at $\ell=221,\ 535,\ 814,\ 1123,\ 1409$
+(`validation/check_cmb_peaks.py`). The law $\ell_n=279.6\,n$ misses the first peak by 26% and the second and third by
+4.5% and 3%, so "within 1%, $A$ fitted to the first peak" fails. A two-parameter line $296.3n-68.4$ is within 3%.
+
+---
+
+## Claims and status
+
+| Claim | Status | Test |
 |---|---|---|
-| Neutron star mass shift | $\sim 0.01 M_\odot$ from quantum TOV | NICER (current) |
-| Binary merger separation | $d = 4r_s$ for equal masses | Next-gen GW detectors |
-| Large-scale $\kappa_5$ activation | Specific correlation at 10–100 Mpc | DESI, Euclid |
-| CMB higher peak modulation | $\ell_n \propto \kappa_{j(n)} \cdot f(n)$ | CMB-S4 |
-| Maximum acceleration | $a_{\max} = 3mc^3/\hbar$ | — |
-| Quantum perihelion shift | $\sim 10^{-90}$ arcsec/century | Unmeasurable |
-| GW phase quantum shift | $\sim 10^{-73}$ rad | Unmeasurable |
+| $\kappa_j$ formula, $\kappa_7=1233$, engine constants | verified | `tests/test_claims.py` |
+| $\lvert\alpha_G\rvert^2=c\hbar/2GMm$, $=1/2$ at the Planck mass | verified | `tests/test_claims.py` |
+| Schwarzschild, Reissner-Nordström, Nariai from the recipe | verified | `tests/test_claims.py`, `tests/test_gaps.py` |
+| Exact N-body metric $\sum_a\sigma_a$ | **fails** (not vacuum) | `tests/test_gaps.py` |
+| Quantum term resolves the singularity with positive energy | **fails** | `tests/test_gaps.py` |
+| Merger at $d=4r_s$ | recorded (depends on which condition is called the merger; total $\sigma=1$ gives $8r_s$) | `tests/test_gaps.py` |
+| Constant entropy correction $2\kappa\ell_Q^2/G\hbar$ | **fails** as stated (below) | `tests/test_nariai_entropy.py` |
+| SPARC RMS 8.3 km/s, $\chi^2_\nu\approx1.2$, zero free parameters | **fails** | `tests/test_sparc.py` |
+| CMB peaks within 1% | **fails** | `tests/test_gaps.py` |
+| $\ell_Q=\sqrt{G\hbar^2/c^4}$ is a length; $\rho_{\rm grav}=GM/4c^2r^3$ is an energy density | **fails** in SI | `tests/test_dimensions.py` |
+| Neutron-star mass shift about $0.01M_\odot$; fourth-order equation reduces to Einstein; Kerr, Vaidya, interior from the recipe | untested | — |
 
-The neutron star mass prediction with NICER is the **critical near-term falsification test**.
-
----
-
-## Independent checks
-
-`tests/` and `validation/reproduce_sparc.py` re-check some of the statements above without importing the
-metric code (the algebra is redone in sympy).  Run `pip install -r requirements.txt pytest pandas`, then
-`python -m pytest -q`.  Expected failures are marked `xfail` with the reason, so a clean run does not hide them.
-
-**Passing:** the factorial formula for the `kappa_j` and the constants in `validation/dark_matter.py`;
-`alpha_G` identities and `|alpha_G|^2 = 1/2` at the Planck mass; the Kerr-Schild form of the Schwarzschild
-recipe is Ricci-flat and the Reissner-Nordstrom recipe (`epsilon = -1` for charge) has exactly the Maxwell
-stress, while the opposite sign gives the opposite-sign stress.
-
-**Fixed in this revision:**
-- `kappa_7` in the README (1245 -> 1233).
-- The Earth-electron value `|alpha_G|^2 = 1.46e39` in `key-equations.md`, `GR-vs-QGD.md` and `docs/complete_paper.tex`
-  is now 4.36e-11 (classical regime), and electron-electron 2.9e44 is given as the quantum-regime example;
-  `docs/Ch1-Foundations.tex` had 4.35e-10 (a factor 10 off) and now reads 4.36e-11; `docs/corrections.md` no longer
-  says the electron-electron value is ~1e-45 (that number is `G m_e^2/(hbar c)`).
-- README links to files that do not exist, the repository-structure listing, and the Quick Start (it imported
-  modules that are not in the repository); the Quick Start is now executed by `tests/test_repo.py`.
-- `EFE_solutions_from_QGD_perspective.py` (both copies) crashed on import; it now runs and passes its 10 checks.
-- A `SyntaxWarning` in `core/PN.py`, and the `master_metric_diagonal` docstring (it returns only the matrix).
-
-**Not reproduced:**
-- `SPARC-rotational.txt` holds 3,827 rows and 225 galaxies; the README quotes 4,248 measurements and 175 galaxies.
-- On that file, with the choices listed in `reproduce_sparc.py` (mass from `V_bar(R_last)`, engine's own surface-density
-  estimate, no external field) the engine gives pooled R^2 = 0.91, matching the README, but RMS = 26 km/s and
-  chi^2_nu = 152, not 8.3 km/s and 1.2.  MOND with one fixed `a0 = 1.2e-10 m/s^2` and the same inputs gives
-  R^2 = 0.93, RMS = 23 km/s and a lower median per-galaxy RMS (10.8 vs 16.7 km/s).
-- The engine has empirical parameters (`SIGMA_CRIT`, `ALPHA`, `BETA_0`, `LOG_M_TRIGGER`, the two mass-to-light
-  ratios, `G_CRIT`), so "zero free parameters per galaxy" holds only in the sense that they are shared across galaxies.
-  Refitting the first three on a random half of the galaxies improves the held-out half only slightly
-  (RMS 24.8 vs 25.6 km/s in the first split), and the fit runs to its bounds, so they are poorly constrained here.
-
-These are statements about this file and these choices, not about the theory; a different mass estimate or
-subset could change the numbers.  `validation/sparc_check.png` shows the comparison.
-
-## Known issues
-
-Found by the checks above and left for the author, because fixing them needs a decision about the theory or
-files that are not in this repository:
-
-1. `core/QGD_vs_GR.py` needed `MasterMetric` and `two_and_three_body_solutions`, which were missing.  Both are now
-   **reconstructed** from how the script uses them (`core/master_metric.py`, `core/two_and_three_body_solutions.py`);
-   the script runs and passes 32 of 33 checks.  The failing one is its own `f_peak` comparison: it computes the GR ISCO
-   frequency of the total mass (67 Hz) and compares it with the ~150 Hz merger peak.  Two reconstruction choices are
-   documented in the code, notably that the "merger at d = 4 r_s" is the separation where the *self* part of sigma^2
-   at the centre of mass equals 1 (the *total* sigma = 1 would give 8 r_s).  If you have the original files, they
-   should replace these.
-2. `core/master_metric.py`: `master_metric_diagonal` and `improved_master_metric` give a metric with all four
-   diagonal entries negative, i.e. no Lorentzian signature, while the header declares (+,-,-,-) and `g_tt = -(1-f)`.
-   The "improved" `g_rr = -(1-f/2)^2 (1+f/2)^2` mixes coordinates: isotropic Schwarzschild has
-   `g_tt = -(1-f/2)^2/(1+f/2)^2` and `g_rho,rho = (1+f/2)^4` with `f = r_s/(2 rho)`, so the claim that it matches
-   isotropic Schwarzschild exactly does not hold (`verify_classical_limit` returns `match = False`).
-3. `docs/Ch9-QG_QFT.tex` is byte-for-byte `docs/Ch8-GravitonApplications.tex` (and the two PDFs are identical).
-4. `notebooks/` holds four files with identical content (one has no `.ipynb` extension).
-5. `DarkMatter/FullStressEnergyTensor.py` is a LaTeX document with a `.py` extension.
-6. `core/dark_matter.py` and `DarkMatter/bullet_cluster.py` are identical, as are the two copies of
-   `EFE_solutions_from_QGD_perspective.py`.
-7. Unit problems in the formulas as written (`tests/test_dimensions.py`): `ell_Q = sqrt(G hbar^2 / c^4)` has dimension
-   (mass x length^3)^(1/2), not length (the Planck length is `sqrt(G hbar / c^3)`); `rho_grav = G M / (4 c^2 r^3)` has
-   dimension 1/length^2, not energy density.  Both may be natural-unit shorthand; the SI forms need fixing.
-8. The citation block still has placeholders (`[author]`, `[matshaba]`) and the BibTeX key says 2025 while the year is 2026.
+Predictions listed by the author (none yet confirmed or excluded here): quantum-TOV neutron-star shift (NICER),
+equal-mass merger separation, large-scale $\kappa_5$ activation (DESI, Euclid), CMB higher-peak modulation (CMB-S4),
+maximum acceleration $a_{\max}=3mc^3/\hbar$; the quantum perihelion ($\sim10^{-90}$ arcsec/century) and GW phase
+($\sim10^{-73}$ rad) shifts are unmeasurable. The neutron-star prediction is the main near-term test, and it is untested here.
 
 ---
 
-## Where the theory has gaps (tests and ledger)
+## What the tests found
 
-`tests/test_gaps.py` turns suspected gaps into tests and `docs/claims_ledger.md` (generated by
-`validation/claims_ledger.py`) lists every claim checked, with its status.  What the tests show:
+- **Singularity.** Each term of $f$ has an implied energy density. Mass is vacuum, charge positive, and the quantum
+  term $+\kappa\hbar^2/(M^2c^2r^2)$ is the Reissner-Nordström term with $Q^2<0$: **negative** density. The Kretschmann
+  scalar still diverges like $r^{-8}$. A regular core needs $f\sim r^2$ at small $r$ (a Hayward-type $f$). Whether the
+  fourth-order $\ell_Q^2$ term supplies that is not decided by the static $f$.
+- **Entropy** (`validation/nariai_entropy.py`, Planck units). The Euclidean action gives $S_{dS}=3\pi/\Lambda$
+  ($S^4$, Euler characteristic 2) and $S_{\rm Nariai}=2\pi/\Lambda$ ($S^2\times S^2$, characteristic 4), matching the
+  horizon areas. A truly topological constant is proportional to the Euler characteristic, i.e. to the number of
+  horizons: it drops out of $dS/dM$ but not out of de Sitter→Nariai pair creation, where it multiplies the rate by
+  $e^{C}$. The documented constant is not that, in either reading of the metric term $A/r^2$:
+  - $A=\kappa\ell_Q^2$ constant: the area law gives $4\pi M^2+2\pi A$ (a constant, but $\pi$ times the documented one),
+    puts a horizon at $r=\sqrt A$ even at $M=0$, and shifts the black-hole horizon by $+\pi A$ and the cosmological
+    one by $-\pi A$, so it is not the same on every horizon.
+  - $A=\kappa\hbar^2/(M^2c^2)$ as written in $f$: the shift is $2\pi\kappa/M^2$ and $dM=T\,dS$ fails.
+  - A Gauss-Bonnet coupling $\alpha\,\mathrm{GB}$ gives $S=2\pi\alpha\chi$ (checked two ways) but is topological in four
+    dimensions and cannot generate the $1/r^2$ term, so the entropy constant and the metric term are independent inputs.
+    The entropy table and the metric term need one consistent definition of $A$.
+- **Nariai with the quantum term.** The double-root point moves to $r_N=1/\sqrt\Lambda+A/2$, $GM_N=1/(3\sqrt\Lambda)-A/2$.
 
-- **Superposition.** The recipe `g = eta + sum eps sigma sigma` is exact when the terms share one null direction
-  (mass + charge on one centre: the mixed Ricci tensor of a Kerr-Schild metric is linear in `h`), which is why the
-  Schwarzschild, Reissner-Nordstrom and de Sitter rows work.  It is **not** exact for two separated masses: the
-  `Sigma_a sigma_a` N-body metric has a nonzero Ricci tensor, of order `(GM)^2` (the cross term).  So the "exact N-body
-  solution" is a statement about the sigma-field sum, not about a vacuum solution of Einstein's equations.
-- **Singularity resolution.** In the static form the universal `f` is additive in the Einstein tensor, so each term
-  has a definite implied energy density: the mass term is vacuum, the charge term positive, and the quantum term
-  `+kappa hbar^2/(M^2 c^2 r^2)` is the Reissner-Nordstrom term with `Q^2 < 0`, i.e. **negative** density, and the
-  Kretschmann scalar still diverges like `r^-8`.  A regular core needs `f ~ r^2` at small `r` (e.g. a Hayward-type
-  `f`).  Whether the fourth-order `l_Q^2` term supplies that is not decided by the static `f`.
-- **de Sitter and Nariai.** The `sigma_Lambda` recipe reproduces the Schwarzschild-de Sitter double-horizon (Nariai)
-  limit exactly: `r = 1/sqrt(Lambda)`, area `4 pi / Lambda`, `G M = c^3 / (3 sqrt(3) H)`.
-- **Entropy** (`validation/nariai_entropy.py`, `tests/test_nariai_entropy.py`, Planck units).  The Euclidean action
-  gives `S_dS = 3 pi/Lambda` (`S^4`, chi = 2) and `S_Nariai = 2 pi/Lambda` (`S^2 x S^2`, chi = 4), matching the horizon
-  areas.  A truly topological constant is proportional to chi, i.e. to the number of horizons: it drops out of `dS/dM`
-  but **not** out of de Sitter -> Nariai pair creation, where it would multiply the rate by `exp(C)`.  The documented
-  constant `2 kappa l_Q^2/(G hbar)` is not that, in either reading of the metric term:
-  (I) with `A = kappa l_Q^2` held constant the area law gives `4 pi M^2 + 2 pi A` (a constant, but `pi` times the
-  documented one) and a horizon at `r = sqrt(A)` even at `M = 0`; the shift is `+pi A` on black-hole-type horizons and
-  `-pi A` on the cosmological one, so it is not the same on every horizon; (II) with `A = kappa hbar^2/(M^2 c^2)` as
-  written in the f formula the shift is `2 pi kappa/M^2` and `dM = T dS` fails.  The entropy table and the metric term
-  need one consistent definition of `A` before this can be tested further.
-- **CMB peaks** (`validation/check_cmb_peaks.py`, Planck binned TT): measured peaks at l = 221, 535, 814, 1123, 1409;
-  the law `l_n = 279.6 n` misses the first by 26% and the second and third by 4.5% and 3%, so "within 1%" and
-  "A fitted to the first peak" do not hold.  A two-parameter line `l_n = 296.3 n - 68.4` stays within 3%.
+**Where the checks came from.** The CICY / pyCICY project keeps an exactness ledger and re-derives gravity-side
+results by independent routes, including the Nariai horizon $dS_2\times S^2$. Used here: the ledger discipline, the
+independent-route principle (the geometry is redone in sympy, not through the QGD code), and the Nariai geometry as the
+check on the de Sitter recipe. Nothing in this repository imports CICY.
 
-**Connection to CICY.** The CICY/pyCICY project keeps an exactness ledger (exact, needs outside input, does not
-exist) and re-derives gravity-side results by independent routes, including the Nariai horizon `dS_2 x S^2`.  Used here:
-the ledger discipline (`docs/claims_ledger.md`), the independent-route principle (every test above redoes the geometry
-with sympy rather than calling the QGD code), and the Nariai geometry as the check on the de Sitter recipe.  Nothing in
-the QGD repository imports CICY.
+Run everything with `python -m pytest -q`; expected failures are `xfail` with the reason, so a clean run does not hide
+them. Regenerate the ledger with `python validation/claims_ledger.py`.
 
 ---
 
-## Repository Structure
+## Open decisions for the author
+
+Fixing these needs a decision about the theory or files not in this repository.
+
+1. **Reconstructed files.** `MasterMetric` and `two_and_three_body_solutions` were missing and are rebuilt from how
+   `core/QGD_vs_GR.py` uses them. The script passes 32 of 33 checks; the failure is its own `f_peak` line (GR ISCO
+   frequency 67 Hz against a merger peak near 150 Hz). Notably, "merger at $d=4r_s$" is taken as the separation where the
+   self part of $\sigma^2$ at the centre of mass equals 1. If you have the originals, they should replace these.
+2. **Signature.** `master_metric_diagonal` and `improved_master_metric` give four negative diagonal entries while the
+   header declares $(+,-,-,-)$ and $g_{tt}=-(1-f)$. The "improved" $g_{rr}=-(1-f/2)^2(1+f/2)^2$ mixes coordinates, so it
+   does not equal isotropic Schwarzschild (`verify_classical_limit` returns `match = False`).
+3. **Units.** In SI, $\ell_Q=\sqrt{G\hbar^2/c^4}$ has dimension (mass·length³)$^{1/2}$ (the Planck length is
+   $\sqrt{G\hbar/c^3}$), and $\rho_{\rm grav}=GM/4c^2r^3$ has dimension 1/length². Both may be natural-unit shorthand.
+4. **Definition of $A$** in the entropy correction (above), and the factor $\pi$ between $2\pi A$ and $2\kappa\ell_Q^2$.
+5. **Duplicates and placeholders.** `docs/Ch9-QG_QFT.tex` equals `docs/Ch8-GravitonApplications.tex` (and the PDFs);
+   `notebooks/` holds four identical files; `DarkMatter/FullStressEnergyTensor.py` is LaTeX; `core/dark_matter.py` equals
+   `DarkMatter/bullet_cluster.py`, as do the two `EFE_solutions_from_QGD_perspective.py`; the citation has placeholders.
+
+Documentation fixed in this revision: $\kappa_7$ (1245→1233); Earth-electron $\lvert\alpha_G\rvert^2=1.46\times10^{39}$
+→ $4.36\times10^{-11}$ (classical regime) with electron-electron $2.9\times10^{44}$ as the quantum example, in
+`key-equations.md`, `GR-vs-QGD.md`, `docs/complete_paper.tex`, `docs/Ch1-Foundations.tex` and `docs/corrections.md`; broken
+README links and the Quick Start; `EFE_solutions_from_QGD_perspective.py` crashing on import; a `SyntaxWarning` in
+`core/PN.py`.
+
+---
+
+## Repository structure
 
 ```
 QGD/
@@ -302,14 +240,17 @@ QGD/
 │   ├── comparison.md, comparison.py
 ├── validation/
 │   ├── dark_matter.py               (QGD engine, v1.8)
-│   ├── reproduce_sparc.py, sparc_check.png, check_cmb_peaks.py, cmb_peaks_check.png, claims_ledger.py
+│   ├── reproduce_sparc.py, sparc_check.png
+│   ├── check_cmb_peaks.py, cmb_peaks_check.png
+│   ├── nariai_entropy.py, nariai_entropy.png
+│   ├── claims_ledger.py             (writes docs/claims_ledger.md)
 │   └── cmb_peaks/
 ├── docs/                            (theory, LaTeX + PDF)
 │   ├── Ch1-Foundations ... Ch16-Quantization (.tex, most with .pdf)
 │   ├── complete_paper.tex, corrections.md, claims_ledger.md, summary.md, extended_summary.md, references.bib
-├── notebooks/                       (four files with identical content, see Known issues)
+├── notebooks/                       (four files with identical content)
 ├── ongoing-work/                    (drafts: DarkEnergy, inflation, field equations, EOB-correction.py ...)
-├── tests/                           (test_claims.py, test_gaps.py, test_dimensions.py, test_sparc.py, test_repo.py, binary_black_hole.py)
+├── tests/                           (test_claims.py, test_gaps.py, test_dimensions.py, test_sparc.py, test_nariai_entropy.py, test_repo.py, binary_black_hole.py)
 ├── key-equations.md, GR-vs-QGD.md, comparison-to-GR-and-NG.md, insights-of-QGD.md, QGD_showcase.md
 └── requirements.txt
 ```
@@ -345,12 +286,19 @@ v_qgd, kappa = predict_rotation_curve(r, v_gas, v_disk, v_bulge, total_mass=5e10
 print(np.round(v_qgd[::6], 1), np.round(kappa[::6], 2))
 ```
 
-The engine has empirical parameters (see "Independent checks"); it is not parameter-free.
-
 ### Run the waveform module
 
 ```bash
 python core/waveform.py
+```
+
+### Re-run the independent checks
+
+```bash
+python validation/reproduce_sparc.py      # SPARC comparison, writes validation/sparc_check.png
+python validation/check_cmb_peaks.py      # CMB peak positions
+python validation/nariai_entropy.py       # Euclidean vs area entropy, quantum-term shifts
+python validation/claims_ledger.py        # regenerate docs/claims_ledger.md
 ```
 
 ## Key References
