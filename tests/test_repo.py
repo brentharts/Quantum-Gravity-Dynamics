@@ -78,13 +78,46 @@ def test_full_stress_energy_tensor_is_python(tmp_path):
 
 
 # ------------------------------------------------------------ known issues (see README)
-@pytest.mark.xfail(reason="master_metric's improved metric has all-negative diagonal (no Lorentzian signature)", strict=True)
-def test_improved_master_metric_has_lorentzian_signature():
+def test_master_metrics_have_lorentzian_signature():
+    """Fixed: the diagonal and improved metrics had four negative entries; they are now (-,+,+,+) like g_tt = -(1-f),
+    and eta is diag(-1,1,1,1)."""
     sys.path.insert(0, os.path.join(ROOT, "core"))
     import master_metric as mm
-    g = mm.improved_master_metric(mm.sp.Rational(3, 10) * 0 + mm.sp.Float(0.3))
-    signs = [mm.sp.N(g[i, i].subs({mm.r: 5, mm.theta: 1.0})) for i in range(4)]
-    assert sum(1 for s in signs if s < 0) == 1
+    f = mm.sp.Float(0.3)
+    for g in (mm.improved_master_metric(f), mm.master_metric_diagonal(f), mm.master_metric_diagonal(f, coords="isotropic"),
+              mm.master_metric_diagonal(f, isotropic_grr=False), mm.schwarzschild_gauge_metric(f)):
+        signs = [mm.sp.N(g[i, i].subs({mm.r: 5, mm.theta: 1.0})) for i in range(4)]
+        assert signs[0] < 0 and all(x > 0 for x in signs[1:])
+    assert mm.eta == mm.sp.diag(-1, 1, 1, 1)
+
+
+def _ricci(g, X):
+    import sympy as sp
+    sys.path.insert(0, os.path.join(ROOT, "validation"))
+    import nariai_entropy as ne
+    return ne.curvature(g, X)[:2]
+
+
+def test_areal_gauge_metric_is_GR_and_the_improved_metric_is_not():
+    """schwarzschild_gauge_metric(f) is vacuum for f = 2GM/c^2 r, solves the Einstein equations with Lambda for
+    f = r_s/r + H^2 r^2, and has the Reissner-Nordstrom Ricci scalar zero; the 'improved' g_rr, which mixes areal g_tt with
+    an isotropic-gauge g_rr, is not Ricci flat for the same f."""
+    import sympy as sp
+    sys.path.insert(0, os.path.join(ROOT, "core"))
+    import master_metric as mm
+    r, th, ph, t = mm.r, mm.theta, sp.Symbol("phi"), sp.Symbol("t")
+    X = [t, r, th, ph]
+    rs, H = sp.symbols("r_s H", positive=True)
+    Ric, Rs = _ricci(mm.schwarzschild_gauge_metric(rs / r, r, th), X)
+    assert all(sp.simplify(Ric[i, j]) == 0 for i in range(4) for j in range(4))
+    g = mm.schwarzschild_gauge_metric(rs / r + H ** 2 * r ** 2, r, th)
+    Ric, Rs = _ricci(g, X)
+    assert all(sp.simplify(Ric[i, j] - 3 * H ** 2 * g[i, j]) == 0 for i in range(4) for j in range(4))
+    Q = sp.symbols("Q", positive=True)
+    Ric, Rs = _ricci(mm.schwarzschild_gauge_metric(rs / r - Q ** 2 / r ** 2, r, th), X)
+    assert sp.simplify(Rs) == 0
+    Ric, Rs = _ricci(mm.improved_master_metric(rs / r, r, th), X)
+    assert any(sp.simplify(Ric[i, j]) != 0 for i in range(4) for j in range(4))
 
 
 @pytest.mark.xfail(reason="the 'improved' metric does not equal isotropic Schwarzschild (g_tt differs)", strict=True)
