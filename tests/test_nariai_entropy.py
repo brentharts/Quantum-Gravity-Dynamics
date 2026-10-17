@@ -110,3 +110,19 @@ def test_nariai_point_moves_with_A():
     rN, MN = ne.nariai_with_A(A, 1.0)
     assert rN - 1 == pytest.approx(A / 2, rel=1e-2)
     assert MN - 1 / 3 == pytest.approx(-A / 2, rel=1e-2)
+
+
+# ---- Gauss-Bonnet reading --------------------------------------------------------------------------------------
+def test_gauss_bonnet_entropy_two_routes_and_what_it_fixes(euclid):
+    """L = (R + alpha GB)/16 pi.  Euclidean route: S = -I = 2 pi alpha chi.  Jacobson-Myers horizon route:
+    S = (1/4) Int_H (1 + 2 alpha R_H) -> alpha * 4 pi per spherical horizon (Int R_H = 8 pi).  They agree on S^4
+    (one horizon) and S^2 x S^2 (two).  Matching the documented constant 2 kappa l_Q^2 needs
+    alpha = kappa l_Q^2 / (2 pi); and since GB is topological in 4D it adds nothing to the field equations, so it
+    cannot generate the kappa l_Q^2 / r^2 metric term: the entropy constant and the f term are independent inputs."""
+    alpha, kap = sp.symbols("alpha kappa_lQ2", positive=True)
+    for name, n_h in (("S4", 1), ("S2xS2", 2)):
+        euclid_route = 2 * sp.pi * alpha * euclid[name]["chi"]
+        jm_route = n_h * sp.Rational(1, 4) * 2 * alpha * 8 * sp.pi
+        assert sp.simplify(euclid_route - jm_route) == 0
+    one_horizon = 4 * sp.pi * alpha
+    assert sp.solve(sp.Eq(one_horizon, 2 * kap), alpha)[0] == kap / (2 * sp.pi)
