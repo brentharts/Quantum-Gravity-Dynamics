@@ -14,6 +14,31 @@ claim below carries a status taken from [`docs/claims_ledger.md`](docs/claims_le
 
 ---
 
+## New: directional timelines, tested (exploratory, not a claim of QGD)
+
+A separate line of work, brought in from the `spectre-monotile-py` fork, models a particle history as a list of steps in the six signed directions
+$\pm X,\pm Y,\pm Z$ (a "direction" is a signed axis; no assumption that space is 3+1), with a "retrocausal consistency contract" that edits steps before and
+after a forced step, a density that sets a local clock rate, and entangled pairs of timelines. Here those toy models are put through this repository's
+ledger discipline. Nothing below says QGD is right, and nothing derives QGD from the toys. The ledger is [`directional/LEDGER.md`](directional/LEDGER.md), the write-up
+[`docs/DIRECTIONAL_AXES.md`](docs/DIRECTIONAL_AXES.md), the code `directional/axis_timelines.py`, `directional/clock_rate_vs_sigma.py` and `directional/coupled_network.py`,
+and the tests `tests/test_directional.py` and `tests/test_directional_coupled.py`.
+
+| Question | Finding | Status |
+|---|---|---|
+| How many closed timelines (zero net flux) of $n$ steps? | $1,0,6,0,90,0,1860,0,44730$ for $n=0..8$; $\lvert\text{flux}\rvert^2$ has the parity of $n$ | verified (brute force) |
+| Does the consistency contract do what it says? | The solver scores an edit by $\lvert \text{old}+\text{new}+\text{flux}\rvert^2$; the flux after the edit is $\lvert\text{flux}-\text{old}+\text{new}\rvert^2$. With the sign corrected it converges in 89% of 2000 seeded runs, against 66% as written | verified (sign); recorded (rates, one seed) |
+| Is gravitational time dilation derived from density? | No: the clock is $1/\rho$ by definition. With $\rho=1+GM/(c^2r)$ it matches QGD's clock $\sqrt{1-\sigma_t^2}$ to first order and differs by $3x^2/2$ at second order ($x=GM/c^2r$). The exact match needs $\rho=(1-r_s/r)^{-1/2}$. The Lorentzian well falls as $d^{-2}$ where $1/r$ is needed, and has no horizon | verified / recorded |
+| Is the entangled pair free of action at a distance? | No, as written: the node contract copies its neighbour and ignores the current state, so measuring A overwrites A's past and all of B, and B's history identifies the axis A measured ($\log_2 3$ bits) | verified |
+| Can a Bell (CHSH) test tell the toy from quantum mechanics? | Not within the six directions: the correlation is $-\mathbf a\cdot\mathbf b$, the singlet's, and the maximum CHSH value is 2 for both. With an added read-out rule (sign of the projection) CHSH reaches 4 against the singlet's $2\sqrt2$ while each outcome stays unbiased; the rule is our assumption | verified / recorded |
+| Does the forced event survive in the gravity model? | Not with uniform density: the first sweep overwrites it | verified |
+
+**What this does and does not show.** It shows what the toy code does, with tests that can fail. It does not show that a retrocausal or directional model cannot work: the
+natural next step is a contract that uses the current state and reveals B's history only through a stated read-out rule, then repeating the CHSH computation. The $E_8$
+and Spectre results of the `spectre-monotile-py` work are rank 8 and stay there; QGD is stated in four dimensions with no extra structure, and no step here uses $E_8$.
+No map between the six directions and the phase field $\sigma_\mu$ has been given. Five statements the toys or their write-up made are listed as untested in the ledger.
+
+---
+
 ## How QGD differs from string theory and loop quantum gravity
 
 | | String theory | Loop quantum gravity | QGD (as proposed) |
@@ -37,6 +62,7 @@ which is correct. Statements about the other two theories are summary-level and 
 
 ## Contents
 
+0. [New: directional timelines, tested](#new-directional-timelines-tested-exploratory-not-a-claim-of-qgd)
 0. [How QGD differs from string theory and LQG](#how-qgd-differs-from-string-theory-and-loop-quantum-gravity)
 1. [The idea](#the-idea)
 2. [Master equations](#master-equations)
@@ -354,6 +380,7 @@ QGD/
 ├── docs/                            (theory, LaTeX + PDF)
 │   ├── Ch1-Foundations ... Ch16-Quantization (.tex, most with .pdf)
 │   ├── complete_paper.tex, corrections.md, claims_ledger.md, summary.md, extended_summary.md, references.bib
+├── directional/                     (six-direction timelines and clock rates; LEDGER.md; see docs/DIRECTIONAL_AXES.md)
 ├── notebooks/                       (four files with identical content)
 ├── ongoing-work/                    (drafts: DarkEnergy, inflation, field equations, EOB-correction.py ...)
 ├── tests/                           (test_claims.py, test_gaps.py, test_dimensions.py, test_sparc.py, test_nariai_entropy.py, test_quantum_core.py, test_repo.py, binary_black_hole.py)
