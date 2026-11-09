@@ -30,12 +30,16 @@ and the tests `tests/test_directional.py` and `tests/test_directional_coupled.py
 | Is gravitational time dilation derived from density? | No: the clock is $1/\rho$ by definition. With $\rho=1+GM/(c^2r)$ it matches QGD's clock $\sqrt{1-\sigma_t^2}$ to first order and differs by $3x^2/2$ at second order ($x=GM/c^2r$). The exact match needs $\rho=(1-r_s/r)^{-1/2}$. The Lorentzian well falls as $d^{-2}$ where $1/r$ is needed, and has no horizon | verified / recorded |
 | Is the entangled pair free of action at a distance? | No, as written: the node contract copies its neighbour and ignores the current state, so measuring A overwrites A's past and all of B, and B's history identifies the axis A measured ($\log_2 3$ bits) | verified |
 | Can a Bell (CHSH) test tell the toy from quantum mechanics? | Not within the six directions: the correlation is $-\mathbf a\cdot\mathbf b$, the singlet's, and the maximum CHSH value is 2 for both. With an added read-out rule (sign of the projection) CHSH reaches 4 against the singlet's $2\sqrt2$ while each outcome stays unbiased; the rule is our assumption | verified / recorded |
+| Which contract policies avoid signalling? | Copy (as written) signals and reaches CHSH 4; global conservation signals; local conservation has no correlation; revelation is local (max 4/3). Not a no-go for models whose history depends on both settings | verified (exact) |
+| Is the dilation derived? | Given the density, yes: update probability $1/\rho$ gives tick rate $1/\rho$ and a redshift equal to the density ratio, and $\rho=(1-r_s/r)^{-1/2}$ gives the Schwarzschild redshift. The density is still an input | verified / recorded |
+| What would retrocausal dependence on the settings cost? | With the origin axis as the hidden state and no signalling, the largest CHSH value is $\min(4,\,4/3+8\delta)$, $\delta$ being how far each hidden-state probability may move from $1/6$. A Bell violation needs $\delta>1/12$. The natural rule (favour anti-correlated origin axes) signals for every strength and reaches CHSH 2.75 only at signalling 0.89 | verified (linear program); no rule that pays the price is known |
+| Do two sources agree with Newton? | The toy's additive density does. The $\sigma$-sum clock does not: its cross term is first order in $G$, so far from two equal masses it behaves like twice the Newtonian mass, $(\sqrt{M_1}+\sqrt{M_2})^2$, and the cross term is not harmonic | verified; the ledger row for the Newtonian limit **fails** |
 | Does the forced event survive in the gravity model? | Not with uniform density: the first sweep overwrites it | verified |
 
 **What this does and does not show.** It shows what the toy code does, with tests that can fail. It does not show that a retrocausal or directional model cannot work: the
 natural next step is a contract that uses the current state and reveals B's history only through a stated read-out rule, then repeating the CHSH computation. The $E_8$
 and Spectre results of the `spectre-monotile-py` work are rank 8 and stay there; QGD is stated in four dimensions with no extra structure, and no step here uses $E_8$.
-No map between the six directions and the phase field $\sigma_\mu$ has been given. Five statements the toys or their write-up made are listed as untested in the ledger.
+No map between the six directions and the phase field $\sigma_\mu$ has been given. Four statements the toys or their write-up made are listed as untested in the ledger.
 
 ---
 
@@ -148,7 +152,7 @@ these and prints `Passed 10/10 checks`.
 
 **Limit of the recipe.** It is exact when all terms share one null direction (mass + charge + $\Lambda$ on one centre:
 for a Kerr-Schild metric the mixed Ricci tensor is linear in $h$). It is **not** exact for separated sources: the
-$\sigma_t=\sum_a\sqrt{2GM_a/c^2r_a}$ N-body metric has a nonzero Ricci tensor of order $(GM)^2$ from the cross term.
+$\sigma_t=\sum_a\sqrt{2GM_a/c^2r_a}$ N-body metric has a nonzero Ricci tensor from the cross term, which is first order in $G$: the residual halves when the masses halve, whereas the linear Kerr-Schild sum is the one that quarters (`tests/test_directional_models.py`). Far from two masses the $\sigma$-sum behaves like a single mass $(\sqrt{M_1}+\sqrt{M_2})^2$ rather than $M_1+M_2$.
 So the "exact N-body solution" is a statement about the $\sigma$-field sum, not a vacuum solution of Einstein's equations.
 
 ---
