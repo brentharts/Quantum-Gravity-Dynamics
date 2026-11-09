@@ -1,0 +1,33 @@
+# Ledger for `directional/`
+
+Same statuses as `docs/claims_ledger.md`: **VERIFIED** (independently checked, true as stated), **RECORDED** (true, with a stated limit),
+**FAILS** (checked, false as stated), **UNTESTED** (needs something not built here). Each row names the test that decides it.
+This ledger is separate from `docs/claims_ledger.md`, which `validation/claims_ledger.py` generates and `tests/test_repo.py` checks; the rows can be
+moved into its `CLAIMS` list if you want one ledger.
+
+The toy models come from `spectre-monotile-py/research/toymodel_v1` (`AxisNetwork.py`, `GravitationalTimelineNetwork.py`, `CoupledParticleNetwork.py`,
+`GridWaveSimulator.py`). The first three are examined so far (`GridWaveSimulator.py` is not).
+
+| status | statement | where it is made | test |
+|---|---|---|---|
+| VERIFIED | Timelines of n steps in the six directions with zero net flux number 1, 0, 6, 0, 90, 0, 1860, 0, 44730 for n = 0..8 | this ledger | `tests/test_directional.py::test_closed_walk_counts_on_z3` |
+| VERIFIED | The dynamic-programming count equals brute-force enumeration (n <= 6; the script also checks n = 7, 8) | this ledger | `tests/test_directional.py::test_closed_count_agrees_with_brute_force` |
+| VERIFIED | \|flux\|^2 has the parity of n | this ledger | `tests/test_directional.py::test_flux_squared_has_the_parity_of_n` |
+| VERIFIED | The contract's stopping rule \|flux\|^2 <= 3 means \|flux\|^2 in {0, 2} for even n and {1, 3} for odd n | `AxisNetwork._resolve_consistency` | `tests/test_directional.py::test_stopping_rule_is_zero_or_two_for_even_n_and_one_or_three_for_odd_n` |
+| VERIFIED | The solver scores a candidate step by \|old + new + flux\|^2, but the flux after the edit is \|flux - old + new\|^2 | `AxisNetwork._resolve_consistency` | `tests/test_directional.py::test_solver_cost_as_written_adds_the_old_step_where_it_should_remove_it` |
+| RECORDED | With the sign corrected, the contract reaches \|flux\|^2 <= 3 more often (89% against 66% for n = 12, 2000 seeded timelines, one forced step); the numbers are for that sample and seed | this ledger | `tests/test_directional.py::test_sign_corrected_contract_converges_more_often` |
+| VERIFIED | The clock of the QGD Schwarzschild recipe is sqrt(1 - sigma_t^2) (Kerr-Schild g_vv = -(1 - sigma_t^2), redone in sympy) | `key-equations.md` | `tests/test_directional.py::test_qgd_recipe_clock_is_sqrt_one_minus_sigma_squared` |
+| VERIFIED | A density that makes "clock = 1/density" equal the QGD clock exists, rho = (1 - r_s/r)^(-1/2), and diverges at r_s | this ledger | `tests/test_directional.py::test_density_that_reproduces_the_qgd_clock_exists_and_diverges_at_the_horizon` |
+| RECORDED | "Clock = 1/density" with rho = 1 + GM/(c^2 r) agrees with QGD / GR to first order in GM/(c^2 r) and differs by 3x^2/2 at second order. The density is chosen, not derived: the clock follows from the definition of the rule | `GravitationalTimelineNetwork.compute_local_clock_rate` | `tests/test_directional.py::test_toy_and_qgd_clocks_agree_to_first_order_and_differ_at_second` |
+| VERIFIED | The Lorentzian well w/(1 + d^2) falls off as d^-2; the density required for a 1/r potential falls off as r^-1 | `GravitationalTimelineNetwork.set_gravitational_well` | `tests/test_directional.py::test_lorentzian_well_tail_is_inverse_square_and_the_required_tail_is_inverse_first_power` |
+| VERIFIED | The toy density is bounded by 1 + w, so its clock never drops below 1/(1 + w); the QGD clock vanishes at r_s. A finite well has no horizon in the toy | this ledger | `tests/test_directional.py::test_toy_density_is_bounded_so_its_clock_has_a_floor` |
+| UNTESTED | Gravitational time dilation "emerges" from interaction density (the density is an input of the toy, and the dilation is its inverse by definition; an emergence claim would need a dynamics that produces the density) | `quantgrav.tex` abstract and introduction, spectre-monotile-py | — |
+| VERIFIED | `_resolve_node_contract(current, reference)` returns `reference` for all 36 pairs: a "contraction" copies the neighbour and ignores the current state | `CoupledParticleNetwork._resolve_node_contract` | `tests/test_directional_coupled.py::test_node_contract_returns_the_reference_for_every_pair` |
+| VERIFIED | After A is measured along an axis, A[0..m] equal the observed axis and all of B equals its inverse | `CoupledParticleNetwork.measure_particle_a` | `tests/test_directional_coupled.py::test_measurement_overwrites_the_past_of_a_and_the_whole_of_b` |
+| VERIFIED | B's history identifies the axis family that A measured (log2 3 bits): the model as written signals instantly through the history | `quantgrav.tex` introduction ("not instantaneous action at a distance") | `tests/test_directional_coupled.py::test_b_history_reveals_the_axis_that_a_measured` |
+| VERIFIED | With read-outs restricted to the six directions the toy's correlation is -a.b, equal to the quantum singlet's, and the maximum CHSH value over all settings is 2 for both; no CHSH test within the six directions separates the toy from quantum mechanics or a local model | this ledger | `tests/test_directional_coupled.py::test_six_direction_chsh_is_two_for_the_toy_and_for_the_singlet`, `::test_toy_correlation_equals_the_singlet_on_the_six_directions` |
+| RECORDED | If B is read along any direction by the rule outcome = sgn(projection of B's vector) (a rule added here, not in the toy), E = -sgn(a.b) and CHSH reaches 4 (above the quantum 2 sqrt 2, which the singlet attains for the same settings) while each outcome stays unbiased | this ledger (the readout rule is an assumption) | `tests/test_directional_coupled.py::test_extended_readout_gives_chsh_four_while_the_singlet_gives_two_root_two`, `::test_b_outcomes_are_unbiased_whatever_a_measures` |
+| VERIFIED | In `GravitationalTimelineNetwork.apply_gravitational_relaxation` with uniform density 1 the forced event is overwritten in the first sweep, and steps 1..n-2 all equal step 0 | `GravitationalTimelineNetwork.py` | `tests/test_directional.py::test_uniform_density_relaxation_erases_the_forced_event` |
+| UNTESTED | The coupled network reproduces quantum correlations: not as written (see the CHSH rows); a contract that uses the current state or a Born-like readout would have to be built first |
+| UNTESTED | The grid simulator produces travelling waves with a definite speed and dispersion | `GridWaveSimulator.py` | — |
+| UNTESTED | Any link between the six-direction timelines and the phase field sigma_mu (the walk's "closed" means zero net flux; sigma's "closed" means d sigma = 0; no map between them is given) | this ledger | — |
